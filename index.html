@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>텍스트 → 음성 연습 사이트</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .app {
+      width: 100%;
+      max-width: 780px;
+      background: #111827;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+      border: 1px solid #1f2937;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      margin-bottom: 16px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      background: #020617;
+      color: #e5e7eb;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      padding: 12px 14px;
+      resize: vertical;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    textarea:focus {
+      outline: 2px solid #22d3ee;
+      outline-offset: 0;
+      border-color: #22d3ee;
+    }
+    .hint {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+    .controls {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      align-items: center;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+    select, input[type="number"] {
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      min-width: 80px;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+    }
+    button:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+    #startBtn {
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      color: #022c22;
+      box-shadow: 0 10px 20px rgba(34,197,94,0.35);
+    }
+    #startBtn[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    #stopBtn {
+      background: #1f2937;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+    }
+    .status {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+    .status span {
+      color: #22d3ee;
+    }
+    .preview {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px dashed #1f2937;
+      font-size: 0.85rem;
+    }
+    .preview-title {
+      color: #9ca3af;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .preview-list {
+      max-height: 120px;
+      overflow-y: auto;
+      padding-left: 16px;
+      margin: 0;
+    }
+    .preview-list li.playing {
+      color: #22d3ee;
+      font-weight: 600;
+    }
+    @media (max-width: 640px) {
+      .controls {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>텍스트를 음성으로 읽어주기</h1>
+    <div class="subtitle">
+      한 줄에 한 단어(또는 짧은 문장)를 입력하면, 선택한 순서와 간격으로 차례대로 읽어줍니다.
+    </div>
+
+    <textarea id="textInput" placeholder="예시)\n감사\n사랑\n기쁨\n평안"></textarea>
+    <div class="hint">※ 줄바꿈(Enter) 기준으로 한 줄이 하나의 단어/문장입니다.</div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="orderSelect">재생 순서:</label>
+        <select id="orderSelect">
+          <option value="input">입력 순서</option>
+          <option value="alpha">ㄱㄴㄷ 순</option>
+          <option value="random">랜덤 순</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="pauseInput">단어 사이 쉼:</label>
+        <input id="pauseInput" type="number" min="0" step="0.5" value="1" />
+        <span>초</span>
+      </div>
+
+      <div class="control-group">
+        <button id="startBtn">▶ 읽기 시작</button>
+        <button id="stopBtn">■ 정지</button>
+      </div>
+    </div>
+
+    <div class="status" id="statusText">
+      준비됨. 텍스트를 입력하고 <span>읽기 시작</span>을 눌러주세요.
+    </div>
+
+    <div class="preview">
+      <div class="preview-title">
+        <span>재생 예정 목록 (최대 20개 미리보기)</span>
+        <span id="previewCount"></span>
+      </div>
+      <ol class="preview-list" id="previewList"></ol>
+    </div>
+  </div>
+
+  <script>
+    const textInput   = document.getElementById("textInput");
+    const orderSelect = document.getElementById("orderSelect");
+    const pauseInput  = document.getElementById("pauseInput");
+    const startBtn    = document.getElementById("startBtn");
+    const stopBtn     = document.getElementById("stopBtn");
+    const statusText  = document.getElementById("statusText");
+    const previewList = document.getElementById("previewList");
+    const previewCount= document.getElementById("previewCount");
+
+    let queue = [];
+    let currentIndex = 0;
+    let isPlaying = false;
+
+    // 텍스트 → 줄 리스트
+    function getLines() {
+      const raw = textInput.value.split(/\r?\n/);
+      return raw.map(l => l.trim()).filter(l => l.length > 0);
+    }
+
+    // 랜덤 섞기
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // 순서 적용해서 큐 만들기
+    function buildQueue() {
+      let lines = getLines();
+      const order = orderSelect.value;
+
+      if (order === "alpha") {
+        lines = lines.slice().sort((a, b) => a.localeCompare(b, "ko-KR"));
+      } else if (order === "random") {
+        lines = shuffle(lines.slice());
+      }
+      queue = lines;
+      currentIndex = 0;
+      updatePreview();
+    }
+
+    // 미리보기 갱신
+    function updatePreview() {
+      previewList.innerHTML = "";
+      previewCount.textContent = queue.length ? queue.length + "개" : "";
+      queue.slice(0, 20).forEach((text, idx) => {
+        const li = document.createElement("li");
+        li.textContent = text;
+        if (idx === currentIndex && isPlaying) {
+          li.classList.add("playing");
+        }
+        previewList.appendChild(li);
+      });
+    }
+
+    // 현재 인덱스 하이라이트
+    function highlightCurrent() {
+      const items = previewList.querySelectorAll("li");
+      items.forEach(li => li.classList.remove("playing"));
+      if (!isPlaying) return;
+      if (currentIndex < items.length) {
+        items[currentIndex].classList.add("playing");
+      }
+    }
+
+    // 실제 읽기
+    function speakNext() {
+      if (!isPlaying) return;
+      if (currentIndex >= queue.length) {
+        isPlaying = false;
+        startBtn.disabled = false;
+        statusText.innerHTML = "완료되었습니다. 다시 재생하려면 <span>읽기 시작</span>을 누르세요.";
+        updatePreview();
+        return;
+      }
+
+      const text = queue[currentIndex];
+      const pause = Math.max(0, parseFloat(pauseInput.value) || 0);
+
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "ko-KR";
+
+      statusText.innerHTML = `재생 중: <span>${currentIndex + 1} / ${queue.length}</span>`;
+      updatePreview();
+      highlightCurrent();
+
+      utter.onend = () => {
+        if (!isPlaying) return;
+        currentIndex++;
+        setTimeout(() => {
+          speakNext();
+        }, pause * 1000);
+      };
+
+      utter.onerror = () => {
+        if (!isPlaying) return;
+        currentIndex++;
+        setTimeout(() => {
+          speakNext();
+        }, pause * 1000);
+      };
+
+      window.speechSynthesis.speak(utter);
+    }
+
+    // 시작 버튼
+    startBtn.addEventListener("click", () => {
+      if (isPlaying) return;
+
+      const lines = getLines();
+      if (!lines.length) {
+        alert("읽을 텍스트가 없습니다.\n한 줄에 한 단어(또는 문장)를 입력해주세요.");
+        return;
+      }
+
+      // 혹시 남아 있는 음성 제거
+      window.speechSynthesis.cancel();
+
+      buildQueue();
+      isPlaying = true;
+      startBtn.disabled = true;
+      statusText.innerHTML = "재생을 시작합니다…";
+      speakNext();
+    });
+
+    // 정지 버튼
+    stopBtn.addEventListener("click", () => {
+      window.speechSynthesis.cancel();
+      isPlaying = false;
+      startBtn.disabled = false;
+      statusText.innerHTML = "정지되었습니다. 다시 재생하려면 <span>읽기 시작</span>을 누르세요.";
+      updatePreview();
+    });
+
+    // 순서/텍스트 바뀔 때마다 미리보기 업데이트
+    textInput.addEventListener("input", () => {
+      buildQueue();
+    });
+    orderSelect.addEventListener("change", () => {
+      buildQueue();
+    });
+
+    // 초기 큐 세팅
+    buildQueue();
+
+    // 일부 브라우저에서 음성 목록 로딩용 (필수는 아님)
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        // 필요하면 나중에 한국어 음성 선택 로직 추가 가능
+      };
+    } else {
+      alert("이 브라우저는 Web Speech API(음성 합성)을 지원하지 않습니다.\n크롬 또는 엣지 사용을 권장합니다.");
+    }
+  </script>
+</body>
+</html>
