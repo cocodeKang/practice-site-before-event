@@ -134,6 +134,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .preview-list {
       max-height: 120px;
@@ -145,6 +147,19 @@
       color: #22d3ee;
       font-weight: 600;
     }
+
+    /* 랜덤 목록 영역용 추가 스타일 */
+    .random-tools {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    #randomListOutput {
+      margin-top: 8px;
+      min-height: 140px;
+    }
+
     @media (max-width: 640px) {
       .controls {
         flex-direction: column;
@@ -196,6 +211,19 @@
       </div>
       <ol class="preview-list" id="previewList"></ol>
     </div>
+
+    <!-- 🔽 랜덤 순서 목록 생성 & 복사 영역 추가 -->
+    <div class="preview">
+      <div class="preview-title">
+        <span>랜덤 순서 목록 만들기 (텍스트 입력을 기준으로 섞기)</span>
+      </div>
+      <div class="random-tools">
+        <button id="makeRandomListBtn">랜덤 순서 목록 생성</button>
+        <button id="copyRandomListBtn">랜덤 목록 복사</button>
+      </div>
+      <textarea id="randomListOutput" placeholder="랜덤으로 섞인 목록이 여기에 표시됩니다." readonly></textarea>
+    </div>
+    <!-- 🔼 추가 끝 -->
   </div>
 
   <script>
@@ -208,6 +236,11 @@
     const previewList = document.getElementById("previewList");
     const previewCount= document.getElementById("previewCount");
 
+    // 랜덤 목록용 요소
+    const makeRandomListBtn = document.getElementById("makeRandomListBtn");
+    const copyRandomListBtn = document.getElementById("copyRandomListBtn");
+    const randomListOutput  = document.getElementById("randomListOutput");
+
     let queue = [];
     let currentIndex = 0;
     let isPlaying = false;
@@ -218,7 +251,7 @@
       return raw.map(l => l.trim()).filter(l => l.length > 0);
     }
 
-    // 랜덤 섞기
+    // 랜덤 섞기 (재생용 + 랜덤 목록용 공통)
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -343,6 +376,54 @@
       buildQueue();
     });
 
+    // ✅ 랜덤 순서 목록 생성 버튼 동작
+    makeRandomListBtn.addEventListener("click", () => {
+      const lines = getLines();
+      if (!lines.length) {
+        alert("먼저 텍스트를 줄바꿈으로 입력해 주세요.");
+        return;
+      }
+      const shuffled = shuffle(lines.slice());
+      randomListOutput.value = shuffled.join("\n");
+    });
+
+    // ✅ 랜덤 목록 복사 버튼 동작
+    copyRandomListBtn.addEventListener("click", async () => {
+      const textToCopy = randomListOutput.value.trim();
+      if (!textToCopy) {
+        alert("복사할 랜덤 목록이 없습니다. 먼저 [랜덤 순서 목록 생성]을 눌러 주세요.");
+        return;
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          alert("랜덤 목록이 클립보드에 복사되었습니다.");
+        } catch (err) {
+          console.error(err);
+          fallbackCopy(randomListOutput);
+        }
+      } else {
+        fallbackCopy(randomListOutput);
+      }
+    });
+
+    // execCommand fallback
+    function fallbackCopy(textarea) {
+      textarea.focus();
+      textarea.select();
+      try {
+        const success = document.execCommand("copy");
+        if (success) {
+          alert("랜덤 목록이 클립보드에 복사되었습니다.");
+        } else {
+          alert("복사에 실패했습니다. 직접 드래그해서 복사해 주세요.");
+        }
+      } catch (err) {
+        alert("복사 기능을 사용할 수 없습니다. 직접 드래그해서 복사해 주세요.");
+      }
+    }
+
     // 초기 큐 세팅
     buildQueue();
 
@@ -352,7 +433,7 @@
         // 필요하면 나중에 한국어 음성 선택 로직 추가 가능
       };
     } else {
-      alert("이 브라우저는 Web Speech API(음성 합성)을 지원하지 않습니다.\n크롬 또는 엣지 사용을 권장합니다.");
+      alert("이 브라우저는 Web Speech API(음성 합성)을 지원하지 않습니다.\n크롬 또는 엣지를 권장합니다.");
     }
   </script>
 </body>
